@@ -22,11 +22,15 @@ const config = require('../config');
 
 class KafkaGroupConsumer {
     constructor(host, topic, groupId) {
-        const consumerOptions = {
-            kafkaHost: host,
-            groupId: groupId
+        const clientOptions = {kafkaHost: host};
+        const client = new kafka.KafkaClient(clientOptions);
+        const options = {
+            autoCommit: true,
+            autoCommitIntervalMs: 1000,
+            autoCommitMsgCount: 100,
+            groupId
         };
-        this.consumerStream = new kafka.ConsumerGroupStream(consumerOptions, [topic]);
+        this.consumerStream = new kafka.ConsumerStream(client, [topic], options);
     }
 }
 

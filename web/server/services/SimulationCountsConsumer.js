@@ -22,6 +22,8 @@ const config = require("../config");
 const {SimulationStatus} = require("../db/models/Simulation");
 const SimulationService = require('../db/services/SimulationService');
 const CountService = require('../db/services/CountService');
+const through2 = require("through2");
+
 
 class SimulationCountsConsumer {
   constructor() {
@@ -30,29 +32,42 @@ class SimulationCountsConsumer {
   }
 
   async start() {
-    for await (const data of this.kafkaConsumer.consumerStream) {
-      const parsedMessage = JSON.parse(data.value);
+    const commitStream = this.kafkaConsumer.consumerStream.createCommitStream();
 
-      let simulationId = parseInt(data.key.toString());
+    const handleMessage = this.handleMessage.bind(this);
+    this.kafkaConsumer.consumerStream
+      .pipe(through2.obj(async function (data, enc, cb) {
+        await handleMessage(data);
+        cb(null, data);
+      }))
+      .pipe(commitStream);
+  }
 
-      const simulationEnded = "simulation_ended" in parsedMessage;
-      const isInterventionMessage = "intervention" in parsedMessage;
+  async handleMessage(data) {
+    const parsedMessage = JSON.parse(data.value);
 
-      if (simulationEnded) {
-        await SimulationService.updateSimulationStatus(simulationId, SimulationStatus.FINISHED);
-        console.log("Consumed all messages for ", simulationId);
-      } else if (isInterventionMessage) {
-        await CountService.addIntervention(simulationId, parsedMessage);
-      } else {
-        await this.handleCountMessage(parsedMessage, simulationId);
-      }
+    let simulationId = parseInt(data.key.toString());
+
+    const simulationEnded = "simulation_ended" in parsedMessage;
+    const isInterventionMessage = "intervention" in parsedMessage;
+
+    if (simulationEnded) {
+      await SimulationService.updateSimulationStatus(simulationId, SimulationStatus.FINISHED);
+      console.log("Consumed all messages for ", simulationId);
+    } else if (isInterventionMessage) {
+      console.log("handling intervention");
+      await CountService.addIntervention(simulationId, parsedMessage);
+    } else {
+      await this.handleCountMessage(parsedMessage, simulationId);
     }
   }
 
   async handleCountMessage(parsedMessage, simulationId) {
-    if (parsedMessage.hour === 1) {
-      SimulationService.updateSimulationStatus(simulationId, SimulationStatus.RUNNING)
-    }
+    if (parsedMessage.hour === 1)
+      SimulationService.updateSimulationStatus(simulationId, SimulationStatus.RUNNING);
+
+    if(parsedMessage.hour % 100 === 0)
+      console.log(simulationId, parsedMessage.hour);
 
     await CountService.upsertCount(simulationId, parsedMessage);
   }
