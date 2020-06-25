@@ -369,7 +369,8 @@ impl Citizen {
     fn update_exposure(&mut self, cell: Point, map: &AgentLocationMap, sim_hr: i32, rng: &mut RandomWrapper,
                        disease: &Disease) {
         if self.state_machine.is_susceptible() && !self.work_quarantined && !self.vaccinated {
-            let neighbours = self.current_area.get_neighbors_of(cell);
+            // let neighbours = self.current_area.get_neighbors_of(cell);
+                let neighbours = cell.neighbor_iterator();
 
             let neighbor_that_spreads_infection = neighbours
                 .filter(|p| map.is_point_in_grid(p))
