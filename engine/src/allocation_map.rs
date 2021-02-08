@@ -176,6 +176,10 @@ impl AgentLocationMap {
         self.agent_cell.iter()
     }
 
+    pub fn iter_read_only(&self) -> impl Iterator<Item = (&Point, &Citizen)> {
+        self.agent_cell_read_only.iter()
+    }
+
     pub fn iter_mut(&self) -> dashmap::iter::IterMut<Point, Citizen, FxBuildHasher, DashMap<Point, Citizen, FxBuildHasher>> {
         self.agent_cell.iter_mut()
     }

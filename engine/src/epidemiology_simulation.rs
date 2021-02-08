@@ -478,9 +478,9 @@ impl Epidemiology {
                 outgoing: &mut Vec<(Point, Traveller)>, publish_citizen_state: bool) {
         write_buffer.clear();
         csv_record.clear();
-        read_buffer.keys().collect::<Vec<&Point>>().into_iter().for_each(|cell| {
+        read_buffer.iter_read_only().for_each(|(cell, agent)| {
             let mut rng_thread= RandomWrapper::new();
-            let mut current_agent = *read_buffer.get(cell).unwrap();
+            let mut current_agent = *agent;
             let infection_status = current_agent.state_machine.is_infected();
             let point = current_agent.perform_operation(*cell, simulation_hour, &grid, read_buffer, &mut rng_thread, disease);
             // Epidemiology::update_counts(csv_record, &current_agent);
