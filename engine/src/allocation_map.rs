@@ -28,10 +28,12 @@ use crate::listeners::events::counts::Counts;
 use crate::travel_plan::Traveller;
 use std::collections::hash_map::{IterMut, Iter, Keys};
 use fnv::FnvHashMap;
-use fxhash::FxBuildHasher;
+use fxhash::{FxBuildHasher, FxHasher};
 use dashmap::{DashMap, ReadOnlyView};
 use serde_json::map::Entry;
 use dashmap::mapref::one::Ref;
+use rayon::prelude::*;
+use std::hash::BuildHasherDefault;
 
 #[derive(Clone)]
 pub struct AgentLocationMap {
@@ -176,6 +178,10 @@ impl AgentLocationMap {
         self.agent_cell.iter()
     }
 
+    pub fn par_iter(&self) -> dashmap::rayon::map::Iter<Point, Citizen, BuildHasherDefault<FxHasher>> {
+        self.agent_cell.par_iter()
+    }
+
     pub fn iter_read_only(&self) -> impl Iterator<Item = (&Point, &Citizen)> {
         self.agent_cell_read_only.iter()
     }
@@ -192,7 +198,7 @@ impl AgentLocationMap {
         self.agent_cell_read_only.get(point)
     }
 
-    pub fn insert(&mut self, point: Point, citizen: Citizen) -> Option<Citizen> {
+    pub fn insert(&self, point: Point, citizen: Citizen) -> Option<Citizen> {
         self.agent_cell.insert(point, citizen)
     }
 
